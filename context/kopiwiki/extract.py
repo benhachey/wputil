@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Script to extract sparse term-article matrix from KOPI Wikipedia data.
+Extract Wikipedia article-term count matrix from KOPI plain text dump.
 """
 import glob
 import gzip
@@ -102,13 +102,17 @@ class KopiReader(object):
 
     def __call__(self):
         "Yield article text, saving names in same order."
+        log.info('Reading..')
         for i, f in enumerate(glob.glob(self.path)):
-            if i >= 1000: #TEST
+            """
+            if i >= 10: #TEST
                 break #TEST
+            """
             log.info('..{}..'.format(f))
             for name, text in self.read(gzip.open(f)):
                 self.y.append(name)
                 yield text
+        log.info('..done.')
 
     def read(self, fh):
         "Yield (name,text) tuples from file."
@@ -180,21 +184,20 @@ class Writer(object):
     def __call__(self):
         "Write matrix to file."
         log.info('Writing..')
-        for i, (label, vector) in enumerate(izip(self.y, self.X)):
-            if i % 100 == 0:
+        for i, row in enumerate(self.rows()):
+            if i % 1000 == 0:
                 log.info('..{}..'.format(i))
-            row = self.format(label, vector)
-            if row is not None:
-                self.fh.write(row.encode(ENC))
+            self.fh.write(u'{}\n'.format(row).encode(ENC))
         log.info('..done.')
 
-    def format(self, label, vector):
-        "Format row data for writing."
-        if vector.getnnz() > 0:
-            return u"{}\n".format(COL_SEP.join(self.columns(label, vector)))
+    def rows(self):
+        "Yield formatted rows."
+        for label, vector in izip(self.y, self.X):
+            if vector.getnnz() > 0: # skip empty vectors
+                yield COL_SEP.join(self.columns(label, vector))
 
     def columns(self, label, vector):
-        "Yield columns for given row data."
+        "Yield formatted columns for given row data."
         yield label.replace(' ', '_')
         for i, freq in izip(vector.indices, vector.data):
             term = self.vocab[i]
