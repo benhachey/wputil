@@ -99,8 +99,10 @@ class KopiReader(object):
         "Yield article text, saving names in same order."
         log.info('Reading..')
         for i, f in enumerate(sorted(glob.glob(self.path))):
+            """
             if i >= 1: #TEST
                 break #TEST
+            """
             log.info('..{}..'.format(f))
             for name, text in self.read(gzip.open(f)):
                 self.y.append(name)
