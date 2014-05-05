@@ -3,26 +3,23 @@
 Extract Wikipedia article-term count matrix from KOPI plain text dump.
 """
 import logging
-from reader import KopiReader
-from sklearn.feature_extraction.text import CountVectorizer
-from writer import Writer
+from extract import build
+from numpy import arange
+from sklearn.feature_extraction.text import _document_frequency
 
-MAX_DF = 1.0
+MAXES = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
 
 logging.basicConfig(format='%(asctime)s %(message)s')
 log = logging.getLogger()
 log.setLevel(logging.INFO) # DEBUG, INFO, WARN, ERROR, CRITICAL
 
-def build(args):
-    "Build article-term vectors."
-    kr = KopiReader(args.root, args.date, args.lang)
-    log.info('Reader:\n{}'.format(kr))
-    v = CountVectorizer(max_df=args.max_df)
-    log.info('Vectorizer:\n{}'.format(v))
-    log.info('Building..')
-    X = v.fit_transform(kr())
-    log.info('..done {}.'.format(X.get_shape()))
-    return kr.y, X, v.get_feature_names()
+def plot(X):
+    N = X.shape[0]
+    dfs = _document_frequency(X)
+    dfs = dfs / float(N)
+    for max_df in MAXES:
+        num_terms = len(dfs[dfs<=max_df])
+        print '{},{}'.format(max_df, num_terms)
 
 if __name__ == '__main__':
     import argparse
@@ -31,7 +28,7 @@ if __name__ == '__main__':
     p.add_argument('date', help='KOPI extraction date')
     p.add_argument('lang', help='KOPI extraction language')
     p.add_argument('--max_df', help='Remove frequent', type=float,
-                   default=MAX_DF)
+                   default=1.0)
     args = p.parse_args()
     y, X, vocab = build(args)
-    Writer(y, X, vocab)()
+    plot(X)
